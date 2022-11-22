@@ -48,6 +48,12 @@ pub use sp_runtime::{Perbill, Permill};
 /// Import the template pallet.
 pub use pallet_template;
 
+//Import the doctor-OTM pallet.
+pub use pallet_doctor_OTM;
+
+//Import the medical-records pallet.
+pub use pallet_medical_record;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -278,6 +284,11 @@ impl pallet_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+/// Configure the pallet-doctor-OTM in pallets/doctor-OTM.
+impl pallet_doctor_OTM::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -296,6 +307,8 @@ construct_runtime!(
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
+		// Include the custom logic from the pallet-doctor-OTM in the runtime.
+		DoctorOTM: pallet_doctor_OTM,
 	}
 );
 
