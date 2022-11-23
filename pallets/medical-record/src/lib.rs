@@ -46,6 +46,15 @@ pub mod pallet {
 		UnverifiedRecord(RecordId, T::AccountId, RecordContent<T>),
 	}
 
+	impl<T: Config> Record<T> {
+		pub fn get_id(&self) -> u32 {
+			match self {
+				Record::UnverifiedRecord(id, _, _) => *id,
+				Record::VerifiedRecord(id, _, _, _) => *id,
+			}
+		}
+	}
+
 	#[pallet::storage]
 	#[pallet::getter(fn records)]
 	pub type Records<T: Config> = StorageDoubleMap<
@@ -152,6 +161,21 @@ pub mod pallet {
 			<Records<T>>::mutate(&patient_account_id, &UserType::Patient, add_record)?;
 
 			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn get_record_by_id(
+			patient_account_id: T::AccountId,
+			user_type: UserType,
+			record_id: u32,
+		) -> Option<Record<T>> {
+			Self::records(&patient_account_id, &user_type).map_or(None, |records| {
+				if (records.len() as u32) < record_id {
+					return None;
+				}
+				records.into_iter().find(|r| r.get_id() == record_id)
+			})
 		}
 	}
 }

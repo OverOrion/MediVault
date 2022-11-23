@@ -271,6 +271,12 @@ impl pallet_medical_record::Config for Runtime {
 	type MaxRecordLength = MaxRecordLength;
 }
 
+impl Runtime {
+	pub fn read_record() {
+		pallet_medical_record::read_record()
+	}
+}
+
 parameter_types! {
 	pub FeeMultiplier: Multiplier = Multiplier::one();
 }
