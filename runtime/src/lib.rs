@@ -51,6 +51,8 @@ pub use pallet_template;
 /// Import the template pallet.
 pub use pallet_medical_record;
 
+pub use pallet_medical_encryption;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -271,10 +273,8 @@ impl pallet_medical_record::Config for Runtime {
 	type MaxRecordLength = MaxRecordLength;
 }
 
-impl Runtime {
-	pub fn read_record() {
-		pallet_medical_record::read_record()
-	}
+impl pallet_medical_encryption::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
 }
 
 parameter_types! {
@@ -319,6 +319,7 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 		MedicalRecord: pallet_medical_record,
+		MedicalEncryption: pallet_medical_encryption,
 	}
 );
 

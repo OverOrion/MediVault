@@ -1,10 +1,7 @@
-use crate as pallet_medical_record;
-use frame_support::{
-	parameter_types,
-	traits::{ConstU16, ConstU64},
-};
+use crate as pallet_medical_encryption;
+use frame_support::traits::{ConstU16, ConstU64};
 use frame_system as system;
-use sp_core::H256;
+use sp_core::{ConstU32, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -12,12 +9,6 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
-parameter_types! {
-	pub const MockMaxRecordContentLength: u32 = 1;
-	pub const MockSignatureLength: u32 = 3;
-	pub const MockMaxRecordLength: u32 = 3;
-}
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -27,7 +18,6 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		MedicalRecord: pallet_medical_record,
 		MedicalEncryption: pallet_medical_encryption,
 	}
 );
@@ -57,13 +47,6 @@ impl system::Config for Test {
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-}
-
-impl pallet_medical_record::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type MaxRecordContentLength = MockMaxRecordContentLength;
-	type SignatureLength = MockSignatureLength;
-	type MaxRecordLength = MockMaxRecordLength;
 }
 
 impl pallet_medical_encryption::Config for Test {
