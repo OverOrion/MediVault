@@ -258,9 +258,11 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
-type MaxRecordContentLength = ConstU32<300>;
-type SignatureLength = ConstU32<150>;
-pub type MaxRecordLength = ConstU32<50>;
+parameter_types! {
+	pub const MaxRecordContentLength: u32 = 300;
+	pub const SignatureLength: u32 = 150;
+	pub const MaxRecordLength: u32 = 50;
+}
 
 impl pallet_medical_record::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;

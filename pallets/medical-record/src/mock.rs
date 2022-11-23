@@ -1,7 +1,10 @@
 use crate as pallet_medical_record;
-use frame_support::traits::{ConstU16, ConstU64};
+use frame_support::{
+	parameter_types,
+	traits::{ConstU16, ConstU64},
+};
 use frame_system as system;
-use sp_core::{ConstU32, H256};
+use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -10,9 +13,11 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-type MockMaxRecordContentLength = ConstU32<1>;
-type MockSignatureLength = ConstU32<1>;
-pub type MockMaxRecordLength = ConstU32<3>;
+parameter_types! {
+	pub const MockMaxRecordContentLength: u32 = 1;
+	pub const MockSignatureLength: u32 = 1;
+	pub const MockMaxRecordLength: u32 = 3;
+}
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
