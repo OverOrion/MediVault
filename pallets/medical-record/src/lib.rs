@@ -16,6 +16,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use scale_info::TypeInfo;
+	use serde::{Deserialize, Serialize};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -29,7 +30,9 @@ pub mod pallet {
 		type MaxRecordLength: Get<u32>;
 	}
 
-	#[derive(Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq, Debug, TypeInfo)]
+	#[derive(
+		Decode, Encode, Deserialize, Serialize, MaxEncodedLen, Clone, PartialEq, Eq, Debug, TypeInfo,
+	)]
 	pub enum UserType {
 		Patient,
 		Doctor,
@@ -81,6 +84,31 @@ pub mod pallet {
 		AccountAlreadyExist,
 		InvalidArgument,
 		ExceedsMaxRecordLength,
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub accounts: Vec<(T::AccountId, UserType)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { accounts: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for (account_id, user_type) in self.accounts.iter() {
+				<Records<T>>::insert(
+					account_id.clone(),
+					user_type.clone(),
+					BoundedVec::with_bounded_capacity(T::MaxRecordLength::get() as usize),
+				);
+			}
+		}
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.

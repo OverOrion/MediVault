@@ -1,6 +1,5 @@
 use crate::{mock::*, Error, Record, UserType};
 use frame_support::{assert_noop, assert_ok, bounded_vec, BoundedVec};
-use sp_core::ConstU32;
 
 use frame_system::RawOrigin;
 use sp_core::Get;
