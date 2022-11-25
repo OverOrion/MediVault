@@ -1,19 +1,25 @@
-use crate as pallet_medical_record;
-use frame_support::traits::{ConstU16, ConstU64};
+use crate::{self as pallet_medical_record, UserType};
+use frame_support::{
+	parameter_types,
+	traits::{ConstU16, ConstU64, GenesisBuild},
+};
 use frame_system as system;
-use pallet_medical_encryption;
-use sp_core::{ConstU32, H256};
+use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
+pub type AccountId = u64;
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-type MockMaxRecordContentLength = ConstU32<1>;
-type MockSignatureLength = ConstU32<3>;
-pub type MockMaxRecordLength = ConstU32<3>;
+parameter_types! {
+	pub const MockMaxRecordContentLength: u32 = 1;
+	pub const MockSignatureLength: u32 = 3;
+	pub const MockMaxRecordLength: u32 = 3;
+}
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -66,7 +72,31 @@ impl pallet_medical_encryption::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 }
 
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+pub struct ExternalitiesBuilder {
+	accounts: Vec<(AccountId, UserType)>,
+}
+
+impl Default for ExternalitiesBuilder {
+	fn default() -> Self {
+		Self { accounts: vec![] }
+	}
+}
+
+impl ExternalitiesBuilder {
+	pub fn with_accounts(mut self, accounts: Vec<(AccountId, UserType)>) -> Self {
+		self.accounts = accounts;
+		self
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default()
+			.build_storage::<Test>()
+			.expect("Frame system builds valid default genesis config");
+
+		pallet_medical_record::GenesisConfig::<Test> { accounts: self.accounts }
+			.assimilate_storage(&mut t)
+			.expect("Can build genesis for medical_record pallet");
+
+		sp_io::TestExternalities::from(t)
+	}
 }
