@@ -204,8 +204,9 @@ pub mod pallet {
 			);
 			let patient_records = <Records<T>>::get(&patient_account_id, &UserType::Patient)
 				.ok_or(Error::<T>::AccountNotFound)?;
-			ensure!((record_id as usize) < patient_records.len(), Error::<T>::InvalidArgument);
-			let old_unverified_record = &patient_records[(record_id as usize)];
+			let record_index = (record_id - 1) as usize;
+			ensure!(record_index < patient_records.len(), Error::<T>::InvalidArgument);
+			let old_unverified_record = &patient_records[record_index];
 			if let Record::UnverifiedRecord(_, _, content_to_verify) = old_unverified_record {
 				Self::doctor_adds_record(
 					origin,
@@ -227,7 +228,7 @@ pub mod pallet {
 		) -> Option<Record<T>> {
 			Self::records(&patient_account_id, &user_type).map_or(None, |records| {
 				if (records.len() as u32) < record_id {
-					return None;
+					return None
 				}
 				records.into_iter().find(|r| r.get_id() == record_id)
 			})
