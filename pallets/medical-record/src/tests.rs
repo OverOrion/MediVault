@@ -127,7 +127,7 @@ fn doctor_can_transform_unverified_record() {
 			assert_ok!(MedicalRecord::doctor_verifies_record(
 				doctor.clone(),
 				patient_account_id,
-				0,
+				1,
 				signature
 			));
 			let verified_records = MedicalRecord::records(patient_account_id, UserType::Patient)

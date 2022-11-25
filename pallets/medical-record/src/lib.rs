@@ -42,11 +42,24 @@ pub mod pallet {
 	type RecordContent<T> = BoundedVec<u8, <T as Config>::MaxRecordContentLength>;
 	type Signature<T> = BoundedVec<u8, <T as Config>::SignatureLength>;
 
-	#[derive(Decode, Encode, Debug, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
+	#[derive(Decode, Encode, Clone, Debug, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub enum Record<T: Config> {
 		VerifiedRecord(RecordId, T::AccountId, RecordContent<T>, Signature<T>),
 		UnverifiedRecord(RecordId, T::AccountId, RecordContent<T>),
+	}
+
+	impl<T: Config> Record<T> {
+		pub(crate) fn transform_unverified_record(
+			record: Record<T>,
+			signature: Signature<T>,
+		) -> Record<T> {
+			match record {
+				Record::VerifiedRecord(_, _, _, _) => record,
+				Record::UnverifiedRecord(record_id, account_id, record_content) =>
+					Record::VerifiedRecord(record_id, account_id, record_content, signature),
+			}
+		}
 	}
 
 	impl<T: Config> Record<T> {
@@ -202,19 +215,24 @@ pub mod pallet {
 				<Records<T>>::contains_key(&who, &UserType::Doctor),
 				Error::<T>::AccountNotFound
 			);
-			let patient_records = <Records<T>>::get(&patient_account_id, &UserType::Patient)
+			let patient_records = &mut <Records<T>>::get(&patient_account_id, &UserType::Patient)
 				.ok_or(Error::<T>::AccountNotFound)?;
 			let record_index = (record_id - 1) as usize;
 			ensure!(record_index < patient_records.len(), Error::<T>::InvalidArgument);
-			let old_unverified_record = &patient_records[record_index];
-			if let Record::UnverifiedRecord(_, _, content_to_verify) = old_unverified_record {
-				Self::doctor_adds_record(
-					origin,
-					patient_account_id,
-					content_to_verify.clone(),
-					signature,
-				)?;
+			let record_to_be_verified = patient_records[record_index].clone();
+			let record_to_be_verified =
+				Record::transform_unverified_record(record_to_be_verified, signature);
+
+			if let Some(old_unverified_record) = patient_records.get_mut(record_index) {
+				*old_unverified_record = record_to_be_verified;
 			}
+
+            let ver_recs = patient_records.clone().into_iter().filter(|r| match r {
+                Record::VerifiedRecord(..) => true,
+                _ => false
+            })
+            .count();
+            assert_eq!(ver_recs, 1);
 
 			Ok(())
 		}
