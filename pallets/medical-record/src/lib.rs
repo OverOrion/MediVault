@@ -16,20 +16,23 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use scale_info::TypeInfo;
+	use serde::{Deserialize, Serialize};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_medical_encryption::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type MaxRecordContentLength: Get<u32>;
 		type SignatureLength: Get<u32>;
 		type MaxRecordLength: Get<u32>;
 	}
 
-	#[derive(Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq, Debug, TypeInfo)]
+	#[derive(
+		Decode, Encode, Deserialize, Serialize, MaxEncodedLen, Clone, PartialEq, Eq, Debug, TypeInfo,
+	)]
 	pub enum UserType {
 		Patient,
 		Doctor,
@@ -44,6 +47,15 @@ pub mod pallet {
 	pub enum Record<T: Config> {
 		VerifiedRecord(RecordId, T::AccountId, RecordContent<T>, Signature<T>),
 		UnverifiedRecord(RecordId, T::AccountId, RecordContent<T>),
+	}
+
+	impl<T: Config> Record<T> {
+		pub fn get_id(&self) -> u32 {
+			match self {
+				Record::UnverifiedRecord(id, _, _) => *id,
+				Record::VerifiedRecord(id, _, _, _) => *id,
+			}
+		}
 	}
 
 	#[pallet::storage]
@@ -72,6 +84,31 @@ pub mod pallet {
 		AccountAlreadyExist,
 		InvalidArgument,
 		ExceedsMaxRecordLength,
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub accounts: Vec<(T::AccountId, UserType)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { accounts: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for (account_id, user_type) in self.accounts.iter() {
+				<Records<T>>::insert(
+					account_id.clone(),
+					user_type.clone(),
+					BoundedVec::with_bounded_capacity(T::MaxRecordLength::get() as usize),
+				);
+			}
+		}
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -152,6 +189,48 @@ pub mod pallet {
 			<Records<T>>::mutate(&patient_account_id, &UserType::Patient, add_record)?;
 
 			Ok(())
+		}
+		#[pallet::weight(10_000)]
+		pub fn doctor_verifies_record(
+			origin: OriginFor<T>,
+			patient_account_id: T::AccountId,
+			record_id: u32,
+			signature: Signature<T>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin.clone())?;
+			ensure!(
+				<Records<T>>::contains_key(&who, &UserType::Doctor),
+				Error::<T>::AccountNotFound
+			);
+			let patient_records = <Records<T>>::get(&patient_account_id, &UserType::Patient)
+				.ok_or(Error::<T>::AccountNotFound)?;
+			ensure!((record_id as usize) < patient_records.len(), Error::<T>::InvalidArgument);
+			let old_unverified_record = &patient_records[(record_id as usize)];
+			if let Record::UnverifiedRecord(_, _, content_to_verify) = old_unverified_record {
+				Self::doctor_adds_record(
+					origin,
+					patient_account_id,
+					content_to_verify.clone(),
+					signature,
+				)?;
+			}
+
+			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub fn get_record_by_id(
+			patient_account_id: T::AccountId,
+			user_type: UserType,
+			record_id: u32,
+		) -> Option<Record<T>> {
+			Self::records(&patient_account_id, &user_type).map_or(None, |records| {
+				if (records.len() as u32) < record_id {
+					return None;
+				}
+				records.into_iter().find(|r| r.get_id() == record_id)
+			})
 		}
 	}
 }
